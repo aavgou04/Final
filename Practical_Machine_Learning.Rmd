@@ -1,0 +1,65 @@
+#Course Project - Practical Machine Learning
+###Weight Lifting Exercise Dataset
+#####Andreas Avgousti, February 2016  
+
+###Introduction
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, our goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to design a model for predicting whether the exersice was done correctly or wrongly.   
+**Please note that randomForest, rattle, caret and rpart libraries have been already uploaded**
+```{r, include =FALSE, echo=TRUE}
+library(randomForest)
+library(rattle)
+library(caret)
+library(rpart)
+```
+###Loan the data
+The data for this project come from [this source][1]. 
+
+We have first downloaded the data:
+```{r, cache=TRUE}
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile="pml-training.csv", method="curl")
+training_raw <- read.csv("pml-training.csv", na.strings=c("NA",""), header=TRUE)
+colnames_train <- colnames(training_raw)
+```
+And then we made some modifications:  
+1.We eliminated variables that had more than 20% as NA values  
+2.We eliminated the first 6 varibles which were details for the participants
+```{r, cache=TRUE}
+x<-ncol(training_raw)
+vectorNA<-vector(mode="logical", length = x)
+for (i in 1:x) {
+  vectorNA[i]<-sum(is.na(training_raw[,i]))/nrow(training_raw)>0.2
+}
+training<-subset(training_raw, select = !vectorNA)
+training<-training[,7:60]
+```
+[1]:http://groupware.les.inf.puc-rio.br/har
+###Splitting data into train1 and train2 for validating our models. 
+```{r}
+set.seed(12345)
+inTrain<-createDataPartition(y=training$classe, p=0.7, list=FALSE)
+train1<-training[inTrain,]
+train2<-training[-inTrain,]
+```
+###Fitting a Model
+After testing several methods (principal component, liner modeling) we attach below the ones that concluded with the best results 
+
+#####Predicting with Trees
+```{r, cache =TRUE}
+fit1<-rpart(classe~., data=train1, method="class")
+pred1<-predict(fit1, newdata=train2, type="class")
+confusionMatrix(pred1, train2$classe)
+```
+As demonstrated above, the accuracy rate of this mothod is 73,68% and the 95% confedence interval is 72,53% to 74,80%
+
+#####Random Forest Method
+```{r, cache=TRUE}
+fit2<-randomForest(classe~., data=train1)
+pred2<-predict(fit2, newdata=train2, type="class")
+confusionMatrix(pred2, train2$classe)
+```
+As demonstrated above the accuracy rate of this method is 99.49%. It is obviously better than the previous. 
+
+###Conclusion 
+The second is much better than the first and at the same time from the previous that we have tried. This model was performed on the testing set and gave 100% accuracy.
+
+
